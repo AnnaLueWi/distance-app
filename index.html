@@ -11,7 +11,6 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Fahrtenbuch</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -635,9 +634,9 @@ document.getElementById('addBtn').addEventListener('click', () => {
 document.getElementById('resetBtn').addEventListener('click', resetForm);
 
 // ═══════════════════════════════════════════════
-// QR SCANNER
+// QR SCANNER – nutzt native BarcodeDetector API (kein externes Script nötig)
 // ═══════════════════════════════════════════════
-let activeInput = null, scanAnimFrame = null, camStream = null;
+let activeInput = null, camStream = null, scanLoop = null;
 
 function openQR() {
   document.getElementById('qrModal').classList.add('show');
@@ -653,95 +652,65 @@ function closeQR() {
 async function startCam() {
   const v = document.getElementById('qrVideo');
 
-  // Try constraints from most specific to most permissive
+  // Check BarcodeDetector support
+  if (!('BarcodeDetector' in window)) {
+    showQrFb('QR-Scanner wird von diesem Browser nicht unterstützt. Bitte Ort manuell eingeben.', 'err');
+    return;
+  }
+
+  // Start camera
   const tries = [
     { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
-    { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },
     { video: { facingMode: 'environment' } },
-    { video: { width: { ideal: 1280 }, height: { ideal: 720 } } },
     { video: true }
   ];
 
   for (const constraint of tries) {
-    try {
-      camStream = await navigator.mediaDevices.getUserMedia(constraint);
-      break;
-    } catch(e) { camStream = null; }
+    try { camStream = await navigator.mediaDevices.getUserMedia(constraint); break; }
+    catch(e) { camStream = null; }
   }
 
   if (!camStream) {
-    showQrFb('Kamera nicht verfügbar – bitte Berechtigung prüfen.', 'err');
+    showQrFb('Kamera nicht verfügbar – Berechtigung prüfen.', 'err');
     return;
   }
 
   v.srcObject = camStream;
-  v.setAttribute('playsinline', true);
-
   try { await v.play(); } catch(e) {}
 
-  // Wait until video has real dimensions then start scanning via requestAnimationFrame
-  waitForVideo(v);
-}
-
-function waitForVideo(v) {
-  if (v.readyState >= 2 && v.videoWidth > 0) {
-    showQrFb('', 'info');
-    document.getElementById('qrFb').classList.remove('show');
-    requestScan();
-  } else {
-    setTimeout(() => waitForVideo(v), 100);
-  }
-}
-
-function requestScan() {
-  scanAnimFrame = requestAnimationFrame(() => {
-    scanFrame();
-    // Continue scanning unless stopped
-    if (camStream) requestScan();
+  // Wait for video to be ready
+  await new Promise(res => {
+    const check = () => v.videoWidth > 0 ? res() : setTimeout(check, 100);
+    check();
   });
+
+  showQrFb('', 'info');
+  document.getElementById('qrFb').classList.remove('show');
+
+  // Start scanning with BarcodeDetector
+  const detector = new BarcodeDetector({ formats: ['qr_code'] });
+
+  scanLoop = setInterval(async () => {
+    if (!camStream || v.paused || v.ended || !v.videoWidth) return;
+    try {
+      const codes = await detector.detect(v);
+      if (codes.length > 0) {
+        const val = codes[0].rawValue.trim();
+        if (activeInput) activeInput.value = val;
+        showQrFb('✓ ' + val, 'ok');
+        stopCam();
+        setTimeout(closeQR, 1400);
+      }
+    } catch(e) {}
+  }, 300);
 }
 
 function stopCam() {
-  if (scanAnimFrame) { cancelAnimationFrame(scanAnimFrame); scanAnimFrame = null; }
+  if (scanLoop) { clearInterval(scanLoop); scanLoop = null; }
   const v = document.getElementById('qrVideo');
   v.pause();
   v.srcObject = null;
-  if (camStream) {
-    camStream.getTracks().forEach(t => t.stop());
-    camStream = null;
-  }
-}
-
-function scanFrame() {
-  const v = document.getElementById('qrVideo');
-  const c = document.getElementById('qrCanvas');
-
-  if (!v.videoWidth || !v.videoHeight || v.paused || v.ended) return;
-
-  // Use native resolution – important for QR detection on mobile
-  c.width  = v.videoWidth;
-  c.height = v.videoHeight;
-
-  const ctx = c.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(v, 0, 0);
-
-  let imageData;
-  try {
-    imageData = ctx.getImageData(0, 0, c.width, c.height);
-  } catch(e) { return; }
-
-  // Try all inversion modes for best detection rate
-  const code = jsQR(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: 'attemptBoth'
-  });
-
-  if (code && code.data.trim()) {
-    const val = code.data.trim();
-    if (activeInput) activeInput.value = val;
-    showQrFb('✓ ' + val, 'ok');
-    stopCam();
-    setTimeout(closeQR, 1400);
-  }
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
 }
 
 function showQrFb(msg, type) {
