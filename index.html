@@ -10,14 +10,14 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Fahrtenbuch</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'DM Sans', sans-serif;
+    font-family: Arial, sans-serif;
     background: #0d1b3e;
     color: #111;
     min-height: 100vh;
@@ -49,7 +49,7 @@
   }
 
   h1 {
-    font-family: 'Space Mono', monospace;
+    font-family: Arial, sans-serif;
     font-size: 0.9rem;
     letter-spacing: 0.1em;
     color: #0d1b3e;
@@ -70,7 +70,7 @@
     border: none;
     background: none;
     border-radius: 6px;
-    font-family: 'Space Mono', monospace;
+    font-family: Arial, sans-serif;
     font-size: 0.65rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -87,7 +87,7 @@
 
   /* ── Field label ── */
   .field-label {
-    font-family: 'Space Mono', monospace;
+    font-family: Arial, sans-serif;
     font-size: 0.6rem;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -100,7 +100,7 @@
   .stop-row { display: flex; align-items: center; gap: 5px; }
 
   .stop-num {
-    font-family: 'Space Mono', monospace;
+    font-family: Arial, sans-serif;
     font-size: 0.6rem;
     color: #9aa5c0;
     width: 14px;
@@ -113,7 +113,7 @@
     border: 1.5px solid #d0d8ed;
     color: #444;
     padding: 9px 6px;
-    font-family: 'Space Mono', monospace;
+    font-family: Arial, sans-serif;
     font-size: 0.64rem;
     border-radius: 6px;
     outline: none;
@@ -130,7 +130,7 @@
     border: 1.5px solid #d0d8ed;
     color: #111;
     padding: 9px 10px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: Arial, sans-serif;
     font-size: 0.88rem;
     border-radius: 6px;
     outline: none;
@@ -162,7 +162,7 @@
     padding: 9px;
     border-radius: 6px;
     cursor: pointer;
-    font-family: 'Space Mono', monospace;
+    font-family: Arial, sans-serif;
     font-size: 0.68rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -182,7 +182,7 @@
     color: #fff;
     border: none;
     border-radius: 6px;
-    font-family: 'Space Mono', monospace;
+    font-family: Arial, sans-serif;
     font-weight: 700;
     font-size: 0.75rem;
     letter-spacing: 0.06em;
@@ -247,8 +247,8 @@
   .seg-label { font-size: 0.8rem; color: #222; flex: 1; min-width: 0; overflow: hidden; }
   .seg-label .route { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .seg-label .arrow { color: #9aa5c0; margin: 0 3px; }
-  .seg-label .seg-date { font-family: 'Space Mono', monospace; font-size: 0.58rem; color: #8a96b5; margin-top: 2px; }
-  .seg-km { font-family: 'Space Mono', monospace; font-size: 0.82rem; font-weight: 700; color: #0d1b3e; flex-shrink: 0; }
+  .seg-label .seg-date { font-family: Arial, sans-serif; font-size: 0.58rem; color: #8a96b5; margin-top: 2px; }
+  .seg-km { font-family: Arial, sans-serif; font-size: 0.82rem; font-weight: 700; color: #0d1b3e; flex-shrink: 0; }
 
   .total-bar {
     background: #0d1b3e;
@@ -258,8 +258,8 @@
     justify-content: space-between;
     align-items: center;
   }
-  .total-bar .lbl { font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #7a92c4; }
-  .total-bar .val { font-family: 'Space Mono', monospace; font-size: 0.95rem; font-weight: 700; color: #fff; }
+  .total-bar .lbl { font-family: Arial, sans-serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #7a92c4; }
+  .total-bar .val { font-family: Arial, sans-serif; font-size: 0.95rem; font-weight: 700; color: #fff; }
 
   hr { border: none; border-top: 1.5px solid #e8ecf5; }
 
@@ -276,7 +276,7 @@
     border: 1.5px solid #d0d8ed;
     color: #111;
     padding: 9px 10px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: Arial, sans-serif;
     font-size: 0.88rem;
     border-radius: 6px;
     outline: none;
@@ -288,7 +288,7 @@
     color: #fff;
     border: none;
     border-radius: 6px;
-    font-family: 'Space Mono', monospace;
+    font-family: Arial, sans-serif;
     font-weight: 700;
     font-size: 0.7rem;
     letter-spacing: 0.04em;
@@ -304,7 +304,7 @@
     border: 1.5px solid #e8b4af;
     color: #c0392b;
     border-radius: 6px;
-    font-family: 'Space Mono', monospace;
+    font-family: Arial, sans-serif;
     font-size: 0.7rem;
     cursor: pointer;
     white-space: nowrap;
@@ -325,8 +325,8 @@
     justify-content: space-between;
     align-items: center;
   }
-  .day-header .day-date { font-family: 'Space Mono', monospace; font-size: 0.72rem; color: #fff; }
-  .day-header .day-km { font-family: 'Space Mono', monospace; font-size: 0.72rem; font-weight: 700; color: #7eb8f7; }
+  .day-header .day-date { font-family: Arial, sans-serif; font-size: 0.72rem; color: #fff; }
+  .day-header .day-km { font-family: Arial, sans-serif; font-size: 0.72rem; font-weight: 700; color: #7eb8f7; }
 
   .day-segs { padding: 8px 0; }
 
@@ -342,7 +342,7 @@
   .hist-seg:last-child { border-bottom: none; }
   .hist-seg .route { color: #555; }
   .hist-seg .arrow { color: #b0bcda; margin: 0 4px; }
-  .hist-seg .km { font-family: 'Space Mono', monospace; font-size: 0.75rem; font-weight: 700; color: #0d1b3e; flex-shrink: 0; }
+  .hist-seg .km { font-family: Arial, sans-serif; font-size: 0.75rem; font-weight: 700; color: #0d1b3e; flex-shrink: 0; }
 
   .month-total {
     background: rgba(13,27,62,0.06);
@@ -352,8 +352,8 @@
     justify-content: space-between;
     align-items: center;
   }
-  .month-total .lbl { font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7a9e; }
-  .month-total .val { font-family: 'Space Mono', monospace; font-size: 1rem; font-weight: 700; color: #0d1b3e; }
+  .month-total .lbl { font-family: Arial, sans-serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7a9e; }
+  .month-total .val { font-family: Arial, sans-serif; font-size: 1rem; font-weight: 700; color: #0d1b3e; }
 
   .empty-state {
     text-align: center;
@@ -375,10 +375,10 @@
     display: flex; flex-direction: column; align-items: center;
     gap: 12px; max-width: 320px; width: 90%;
   }
-  .qr-title { font-family: 'Space Mono', monospace; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: #0d1b3e; }
+  .qr-title { font-family: Arial, sans-serif; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: #0d1b3e; }
   #qrVideo { width: 100%; border-radius: 8px; border: 2px solid #d0d8ed; background: #000; }
   .qr-hint { font-size: 0.76rem; color: #6b7a9e; text-align: center; line-height: 1.5; }
-  .qr-cancel { background: none; border: 1.5px solid #d0d8ed; color: #6b7a9e; padding: 7px 18px; border-radius: 6px; cursor: pointer; font-family: 'Space Mono', monospace; font-size: 0.7rem; text-transform: uppercase; }
+  .qr-cancel { background: none; border: 1.5px solid #d0d8ed; color: #6b7a9e; padding: 7px 18px; border-radius: 6px; cursor: pointer; font-family: Arial, sans-serif; font-size: 0.7rem; text-transform: uppercase; }
   .qr-fb { padding: 7px 14px; border-radius: 6px; font-size: 0.8rem; display: none; text-align: center; width: 100%; }
   .qr-fb.show { display: block; }
   .qr-fb.ok { background: #e8f5e9; border: 1.5px solid #81c784; color: #2e7d32; }
@@ -529,9 +529,18 @@ const QR_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" 
   <line x1="14" y1="20" x2="14" y2="17"/>
 </svg>`;
 
+function getLastLocation() {
+  const inputs = [...document.querySelectorAll('.stop-row input[type="text"]')];
+  for (let i = inputs.length - 1; i >= 0; i--) {
+    if (inputs[i].value.trim()) return inputs[i].value.trim();
+  }
+  return '';
+}
+
 function addStop(placeholder, isFirst) {
   stopCount++;
   const list = document.getElementById('stopsList');
+  const isThirdOrMore = list.children.length >= 2;
   const row = document.createElement('div');
   row.className = 'stop-row';
   row.innerHTML = `
@@ -539,12 +548,19 @@ function addStop(placeholder, isFirst) {
     <input type="date" />
     <input type="text" placeholder="${placeholder || 'Ort eingeben'}" autocomplete="off" />
     <button class="icon-btn qr-btn" title="QR scannen">${QR_ICON}</button>
-    <button class="icon-btn remove" title="Entfernen">&#x00D7;</button>
+    <button class="icon-btn remove" title="Entfernen" style="${isThirdOrMore ? '' : 'visibility:hidden'}">&#x00D7;</button>
   `;
 
-  // Set date: first stop gets today, others inherit from previous
+  // Set date from previous stop
   const dateInput = row.querySelector('input[type="date"]');
   dateInput.value = getLastDate();
+
+  // Pre-fill location from previous stop's destination
+  const textInput = row.querySelector('input[type="text"]');
+  if (!isFirst) {
+    const lastLoc = getLastLocation();
+    if (lastLoc) textInput.value = lastLoc;
+  }
 
   // When date changes → propagate to all following stops
   dateInput.addEventListener('change', () => {
@@ -555,7 +571,7 @@ function addStop(placeholder, isFirst) {
     }
   });
 
-  // Remove button – always works, but keeps minimum 2 stops
+  // Remove button
   row.querySelector('.remove').addEventListener('click', () => {
     const list = document.getElementById('stopsList');
     if (list.children.length > 2) {
@@ -569,12 +585,12 @@ function addStop(placeholder, isFirst) {
     openQR();
   });
 
-  row.querySelector('input[type="text"]').addEventListener('keydown', e => {
+  textInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       const inputs = [...document.querySelectorAll('.stop-row input[type="text"]')];
       const idx = inputs.indexOf(e.target);
       if (idx < inputs.length - 1) inputs[idx + 1].focus();
-      else document.getElementById('calcBtn').click();
+      else document.getElementById('saveBtn').click();
     }
   });
 
@@ -585,6 +601,8 @@ function addStop(placeholder, isFirst) {
 function updateNumbers() {
   document.querySelectorAll('.stop-row').forEach((row, i) => {
     row.querySelector('.stop-num').textContent = i + 1;
+    // Show X only from 3rd row onwards
+    row.querySelector('.remove').style.visibility = i >= 2 ? '' : 'hidden';
   });
 }
 
@@ -602,7 +620,9 @@ function resetForm() {
 
 addStop('Startpunkt', true);
 addStop('Endpunkt');
-document.getElementById('addBtn').addEventListener('click', () => addStop('Zwischenstopp'));
+document.getElementById('addBtn').addEventListener('click', () => {
+  addStop('Zwischenstopp');
+});
 document.getElementById('resetBtn').addEventListener('click', resetForm);
 
 // ═══════════════════════════════════════════════
@@ -754,10 +774,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     }
     sucEl.classList.add('show');
 
-    setTimeout(() => {
-      sucEl.classList.remove('show');
-      resetForm();
-    }, 2200);
+    setTimeout(() => sucEl.classList.remove('show'), 2200);
 
   } catch(e) {
     errEl.textContent = e.message;
