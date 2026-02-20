@@ -389,8 +389,9 @@
   .qr-cancel { background: none; border: 1.5px solid #d0d8ed; color: #6b7a9e; padding: 7px 18px; border-radius: 6px; cursor: pointer; font-family: Arial, sans-serif; font-size: 0.7rem; text-transform: uppercase; }
   .qr-fb { padding: 7px 14px; border-radius: 6px; font-size: 0.8rem; display: none; text-align: center; width: 100%; }
   .qr-fb.show { display: block; }
-  .qr-fb.ok { background: #e8f5e9; border: 1.5px solid #81c784; color: #2e7d32; }
-  .qr-fb.err { background: #fff0ee; border: 1.5px solid #e8b4af; color: #c0392b; }
+  .qr-fb.ok   { background: #e8f5e9; border: 1.5px solid #81c784; color: #2e7d32; }
+  .qr-fb.err  { background: #fff0ee; border: 1.5px solid #e8b4af; color: #c0392b; }
+  .qr-fb.info { background: #f0f3fa; border: 1.5px solid #d0d8ed; color: #6b7a9e; }
 </style>
 </head>
 <body>
@@ -636,11 +637,11 @@ document.getElementById('resetBtn').addEventListener('click', resetForm);
 // ═══════════════════════════════════════════════
 // QR SCANNER
 // ═══════════════════════════════════════════════
-let activeInput = null, scanInterval = null, camStream = null;
+let activeInput = null, scanAnimFrame = null, camStream = null;
 
 function openQR() {
   document.getElementById('qrModal').classList.add('show');
-  document.getElementById('qrFb').classList.remove('show');
+  showQrFb('Kamera wird gestartet…', 'info');
   startCam();
 }
 
@@ -651,93 +652,103 @@ function closeQR() {
 
 async function startCam() {
   const v = document.getElementById('qrVideo');
-  showQrFb('Kamera wird gestartet…', true);
 
-  // Try back camera first, fall back to any camera
-  const constraints = [
+  // Try constraints from most specific to most permissive
+  const tries = [
     { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+    { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },
     { video: { facingMode: 'environment' } },
+    { video: { width: { ideal: 1280 }, height: { ideal: 720 } } },
     { video: true }
   ];
 
-  for (const c of constraints) {
+  for (const constraint of tries) {
     try {
-      camStream = await navigator.mediaDevices.getUserMedia(c);
+      camStream = await navigator.mediaDevices.getUserMedia(constraint);
       break;
     } catch(e) { camStream = null; }
   }
 
   if (!camStream) {
-    showQrFb('Kamera konnte nicht gestartet werden. Bitte Kamera-Berechtigung prüfen.', false);
+    showQrFb('Kamera nicht verfügbar – bitte Berechtigung prüfen.', 'err');
     return;
   }
 
   v.srcObject = camStream;
-
-  // Use onloadeddata as it fires more reliably on mobile than loadedmetadata
-  v.onloadeddata = () => {
-    document.getElementById('qrFb').classList.remove('show');
-    if (scanInterval) clearInterval(scanInterval);
-    scanInterval = setInterval(scanFrame, 250);
-  };
-
-  // Fallback: start scanning after 1.5s even if event didn't fire
-  setTimeout(() => {
-    if (!scanInterval) {
-      document.getElementById('qrFb').classList.remove('show');
-      scanInterval = setInterval(scanFrame, 250);
-    }
-  }, 1500);
+  v.setAttribute('playsinline', true);
 
   try { await v.play(); } catch(e) {}
+
+  // Wait until video has real dimensions then start scanning via requestAnimationFrame
+  waitForVideo(v);
+}
+
+function waitForVideo(v) {
+  if (v.readyState >= 2 && v.videoWidth > 0) {
+    showQrFb('', 'info');
+    document.getElementById('qrFb').classList.remove('show');
+    requestScan();
+  } else {
+    setTimeout(() => waitForVideo(v), 100);
+  }
+}
+
+function requestScan() {
+  scanAnimFrame = requestAnimationFrame(() => {
+    scanFrame();
+    // Continue scanning unless stopped
+    if (camStream) requestScan();
+  });
 }
 
 function stopCam() {
-  clearInterval(scanInterval); scanInterval = null;
+  if (scanAnimFrame) { cancelAnimationFrame(scanAnimFrame); scanAnimFrame = null; }
   const v = document.getElementById('qrVideo');
-  v.onloadeddata = null;
+  v.pause();
   v.srcObject = null;
-  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  if (camStream) {
+    camStream.getTracks().forEach(t => t.stop());
+    camStream = null;
+  }
 }
 
 function scanFrame() {
   const v = document.getElementById('qrVideo');
   const c = document.getElementById('qrCanvas');
 
-  // Need valid video dimensions
-  if (!v.videoWidth || !v.videoHeight) return;
-  if (v.paused || v.ended) return;
+  if (!v.videoWidth || !v.videoHeight || v.paused || v.ended) return;
 
-  // Downscale for performance but keep enough resolution for QR detection
-  const maxSize = 600;
-  const scale = Math.min(1, maxSize / Math.max(v.videoWidth, v.videoHeight));
-  c.width  = Math.floor(v.videoWidth  * scale);
-  c.height = Math.floor(v.videoHeight * scale);
+  // Use native resolution – important for QR detection on mobile
+  c.width  = v.videoWidth;
+  c.height = v.videoHeight;
 
   const ctx = c.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(v, 0, 0, c.width, c.height);
+  ctx.drawImage(v, 0, 0);
 
   let imageData;
-  try { imageData = ctx.getImageData(0, 0, c.width, c.height); }
-  catch(e) { return; }
+  try {
+    imageData = ctx.getImageData(0, 0, c.width, c.height);
+  } catch(e) { return; }
 
+  // Try all inversion modes for best detection rate
   const code = jsQR(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: 'dontInvert'
+    inversionAttempts: 'attemptBoth'
   });
 
   if (code && code.data.trim()) {
     const val = code.data.trim();
     if (activeInput) activeInput.value = val;
-    showQrFb('✓ Erkannt: ' + val, true);
+    showQrFb('✓ ' + val, 'ok');
     stopCam();
     setTimeout(closeQR, 1400);
   }
 }
 
-function showQrFb(msg, ok) {
+function showQrFb(msg, type) {
   const el = document.getElementById('qrFb');
   el.textContent = msg;
-  el.className = 'qr-fb show ' + (ok ? 'ok' : 'err');
+  if (!msg) { el.classList.remove('show'); return; }
+  el.className = 'qr-fb show ' + type;
 }
 
 document.getElementById('qrCancel').addEventListener('click', closeQR);
