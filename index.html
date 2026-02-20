@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1b3e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Strecken">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Mehrstrecken-Rechner</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0d1b3e;
+    color: #111;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  .card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.4);
+  }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.95rem;
+    letter-spacing: 0.1em;
+    color: #0d1b3e;
+    text-transform: uppercase;
+  }
+
+  .field-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #6b7a9e;
+    margin-bottom: 8px;
+  }
+
+  .stops-list { display: flex; flex-direction: column; gap: 8px; }
+  .stop-row { display: flex; align-items: center; gap: 5px; }
+
+  .stop-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: #9aa5c0;
+    width: 16px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  input[type="date"] {
+    background: #f0f3fa;
+    border: 1.5px solid #d0d8ed;
+    color: #444;
+    padding: 10px 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 112px;
+    flex-shrink: 0;
+    color-scheme: light;
+  }
+  input[type="date"]:focus { border-color: #0d1b3e; }
+
+  input[type="text"] {
+    flex: 1;
+    background: #f0f3fa;
+    border: 1.5px solid #d0d8ed;
+    color: #111;
+    padding: 10px 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 0;
+  }
+  input[type="text"]:focus { border-color: #0d1b3e; }
+
+  .icon-btn {
+    background: #f0f3fa;
+    border: 1.5px solid #d0d8ed;
+    color: #6b7a9e;
+    width: 34px; height: 34px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .icon-btn:hover, .icon-btn:active { border-color: #0d1b3e; color: #0d1b3e; background: #e4eaf7; }
+  .icon-btn.remove:hover, .icon-btn.remove:active { border-color: #c0392b; color: #c0392b; background: #fff0ee; }
+
+  .add-btn {
+    background: none;
+    border: 1.5px dashed #b0bcda;
+    color: #8a96b5;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    width: 100%;
+    transition: all 0.15s;
+    margin-top: 6px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .add-btn:active { border-color: #0d1b3e; color: #0d1b3e; }
+
+  .btn-row { display: flex; gap: 10px; }
+
+  button.calc {
+    flex: 1;
+    padding: 14px;
+    background: #0d1b3e;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button.calc:active { background: #162a5e; }
+  button.calc:disabled { opacity: 0.4; }
+
+  button.export {
+    padding: 14px 16px;
+    background: #1a6b3c;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: none;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button.export:active { background: #145530; }
+  button.export.show { display: block; }
+
+  .spinner {
+    display: none;
+    width: 18px; height: 18px;
+    border: 2px solid #d0d8ed;
+    border-top-color: #0d1b3e;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto;
+  }
+  .spinner.show { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error {
+    display: none;
+    background: #fff0ee;
+    border: 1.5px solid #e8b4af;
+    color: #c0392b;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+  }
+  .error.show { display: block; }
+
+  .results { display: none; flex-direction: column; gap: 8px; }
+  .results.show { display: flex; }
+
+  .segment-row {
+    background: #f0f3fa;
+    border: 1.5px solid #d0d8ed;
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .segment-label { font-size: 0.82rem; color: #222; flex: 1; min-width: 0; overflow: hidden; }
+  .segment-label .route-line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .segment-label .arrow { color: #9aa5c0; margin: 0 4px; }
+  .segment-date { font-family: 'Space Mono', monospace; font-size: 0.6rem; color: #8a96b5; margin-top: 3px; }
+
+  .segment-km {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0d1b3e;
+    flex-shrink: 0;
+  }
+
+  .total-row {
+    background: #0d1b3e;
+    border-radius: 6px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .total-row .lbl { font-family: 'Space Mono', monospace; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: #7a92c4; }
+  .total-row .km { font-family: 'Space Mono', monospace; font-size: 1rem; font-weight: 700; color: #ffffff; }
+
+  hr { border: none; border-top: 1.5px solid #e8ecf5; }
+
+  /* QR Modal */
+  .qr-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .qr-modal.show { display: flex; }
+
+  .qr-box {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 340px;
+    width: 90%;
+  }
+
+  .qr-title { font-family: 'Space Mono', monospace; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: #0d1b3e; }
+
+  #qrVideo { width: 100%; border-radius: 8px; border: 2px solid #d0d8ed; background: #000; }
+  .qr-hint { font-size: 0.78rem; color: #6b7a9e; text-align: center; line-height: 1.5; }
+
+  .qr-cancel {
+    background: none;
+    border: 1.5px solid #d0d8ed;
+    color: #6b7a9e;
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+  }
+
+  .qr-success {
+    background: #e8f5e9;
+    border: 1.5px solid #81c784;
+    color: #2e7d32;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    display: none;
+    text-align: center;
+    width: 100%;
+  }
+  .qr-success.show { display: block; }
+
+  /* Install banner */
+  .install-banner {
+    display: none;
+    background: #e8f0fe;
+    border: 1.5px solid #a8c0f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    color: #0d1b3e;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+  }
+  .install-banner.show { display: flex; }
+  .install-banner button {
+    background: #0d1b3e;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Mehrstrecken-Rechner</h1>
+
+  <div class="install-banner" id="installBanner">
+    <span>📱 App installieren?</span>
+    <button id="installBtn">Installieren</button>
+  </div>
+
+  <div>
+    <div class="field-label">Haltepunkte</div>
+    <div class="stops-list" id="stopsList"></div>
+    <button class="add-btn" id="addBtn">+ Haltepunkt hinzufügen</button>
+  </div>
+
+  <hr>
+
+  <div class="btn-row">
+    <button class="calc" id="btn">Strecken berechnen</button>
+    <button class="export" id="exportBtn">⬇ Excel</button>
+  </div>
+  <div class="spinner" id="spinner"></div>
+  <div class="error" id="error"></div>
+  <div class="results" id="results"></div>
+</div>
+
+<!-- QR Modal -->
+<div class="qr-modal" id="qrModal">
+  <div class="qr-box">
+    <div class="qr-title">QR-Code scannen</div>
+    <video id="qrVideo" autoplay playsinline muted></video>
+    <canvas id="qrCanvas" style="display:none"></canvas>
+    <div class="qr-hint">Halte einen QR-Code mit einem Ortsnamen oder einer Adresse in die Kamera.</div>
+    <div class="qr-success" id="qrSuccess"></div>
+    <button class="qr-cancel" id="qrCancel">Abbrechen</button>
+  </div>
+</div>
+
+<script>
+  // ── Service Worker ────────────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+
+  // ── Install Prompt ────────────────────────────────────────────────
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installBanner').classList.add('show');
+  });
+
+  document.getElementById('installBtn').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById('installBanner').classList.remove('show');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('installBanner').classList.remove('show');
+  });
+
+  // ── Stops ─────────────────────────────────────────────────────────
+  let stopCount = 0;
+  let activeInput = null;
+  let scanInterval = null;
+  let stream = null;
+  let lastSegments = [];
+
+  function addStop(placeholder) {
+    stopCount++;
+    const list = document.getElementById('stopsList');
+    const row = document.createElement('div');
+    row.className = 'stop-row';
+    row.dataset.id = stopCount;
+    row.innerHTML = `
+      <span class="stop-num">${list.children.length + 1}</span>
+      <input type="date" />
+      <input type="text" placeholder="${placeholder || 'Ort eingeben'}" autocomplete="off" />
+      <button class="icon-btn qr-btn" title="QR-Code scannen">&#x1F4F7;</button>
+      <button class="icon-btn remove" title="Entfernen">&#x00D7;</button>
+    `;
+    row.querySelector('.remove').addEventListener('click', () => {
+      if (document.getElementById('stopsList').children.length > 2) {
+        row.remove();
+        updateNumbers();
+      }
+    });
+    row.querySelector('.qr-btn').addEventListener('click', () => {
+      activeInput = row.querySelector('input[type="text"]');
+      openQR();
+    });
+    row.querySelector('input[type="text"]').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const inputs = [...document.querySelectorAll('.stop-row input[type="text"]')];
+        const idx = inputs.indexOf(e.target);
+        if (idx < inputs.length - 1) inputs[idx + 1].focus();
+        else document.getElementById('btn').click();
+      }
+    });
+    list.appendChild(row);
+    updateNumbers();
+  }
+
+  function updateNumbers() {
+    document.querySelectorAll('.stop-row').forEach((row, i) => {
+      row.querySelector('.stop-num').textContent = i + 1;
+    });
+  }
+
+  addStop('Startpunkt');
+  addStop('Endpunkt');
+  document.getElementById('addBtn').addEventListener('click', () => addStop('Zwischenstopp'));
+
+  // ── QR ────────────────────────────────────────────────────────────
+  function openQR() {
+    document.getElementById('qrModal').classList.add('show');
+    document.getElementById('qrSuccess').classList.remove('show');
+    startCamera();
+  }
+  function closeQR() {
+    document.getElementById('qrModal').classList.remove('show');
+    stopCamera();
+  }
+  async function startCamera() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const video = document.getElementById('qrVideo');
+      video.srcObject = stream;
+      video.play();
+      video.addEventListener('loadedmetadata', () => {
+        scanInterval = setInterval(scanFrame, 200);
+      }, { once: true });
+    } catch (e) {
+      const s = document.getElementById('qrSuccess');
+      s.textContent = 'Kamera nicht verfügbar: ' + e.message;
+      s.style.cssText = 'background:#fff0ee;border-color:#e8b4af;color:#c0392b';
+      s.classList.add('show');
+    }
+  }
+  function stopCamera() {
+    clearInterval(scanInterval); scanInterval = null;
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  }
+  function scanFrame() {
+    const video = document.getElementById('qrVideo');
+    const canvas = document.getElementById('qrCanvas');
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+    if (code && code.data.trim()) {
+      if (activeInput) activeInput.value = code.data.trim();
+      const s = document.getElementById('qrSuccess');
+      s.textContent = '✓ Erkannt: ' + code.data.trim();
+      s.style.cssText = '';
+      s.classList.add('show');
+      stopCamera();
+      setTimeout(closeQR, 1200);
+    }
+  }
+  document.getElementById('qrCancel').addEventListener('click', closeQR);
+  document.getElementById('qrModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('qrModal')) closeQR();
+  });
+
+  // ── Routing ───────────────────────────────────────────────────────
+  async function geocode(q) {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`, { headers: { 'Accept-Language': 'de' } });
+    const d = await r.json();
+    if (!d.length) throw new Error(`Ort nicht gefunden: "${q}"`);
+    return { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon), name: d[0].display_name.split(',')[0].trim() };
+  }
+  async function getRoute(from, to) {
+    const r = await fetch(`https://router.project-osrm.org/route/v1/car/${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`);
+    const d = await r.json();
+    if (d.code !== 'Ok') throw new Error(`Keine Route: ${from.name} → ${to.name}`);
+    return d.routes[0].distance;
+  }
+  function fmt(m) { return m >= 1000 ? (m/1000).toFixed(1) + ' km' : Math.round(m) + ' m'; }
+
+  document.getElementById('btn').addEventListener('click', async () => {
+    const rows = [...document.querySelectorAll('.stop-row')];
+    const inputs = rows.map(r => r.querySelector('input[type="text"]').value.trim());
+    const dates = rows.map(r => {
+      const v = r.querySelector('input[type="date"]').value;
+      if (!v) return null;
+      const [y, m, d] = v.split('-');
+      return `${d}.${m}.${y}`;
+    });
+
+    const err = document.getElementById('error');
+    const res = document.getElementById('results');
+    const btn = document.getElementById('btn');
+    const spin = document.getElementById('spinner');
+    const exportBtn = document.getElementById('exportBtn');
+
+    err.classList.remove('show');
+    res.classList.remove('show');
+    exportBtn.classList.remove('show');
+    res.innerHTML = '';
+    lastSegments = [];
+
+    if (inputs.some(v => !v)) { err.textContent = 'Bitte alle Ortsfelder ausfüllen.'; err.classList.add('show'); return; }
+
+    btn.disabled = true;
+    spin.classList.add('show');
+
+    try {
+      const places = await Promise.all(inputs.map(geocode));
+      let totalDist = 0;
+
+      for (let i = 0; i < places.length - 1; i++) {
+        const dist = await getRoute(places[i], places[i+1]);
+        const seg = { von: places[i].name, nach: places[i+1].name, datumVon: dates[i] || '', datumNach: dates[i+1] || '', distanz: dist };
+        lastSegments.push(seg);
+        totalDist += dist;
+
+        const dateStr = seg.datumVon || seg.datumNach ? `${seg.datumVon || '?'} → ${seg.datumNach || '?'}` : null;
+        const row = document.createElement('div');
+        row.className = 'segment-row';
+        row.innerHTML = `
+          <div class="segment-label">
+            <div class="route-line">${seg.von.length>18?seg.von.slice(0,16)+'…':seg.von}<span class="arrow">→</span>${seg.nach.length>18?seg.nach.slice(0,16)+'…':seg.nach}</div>
+            ${dateStr ? `<div class="segment-date">${dateStr}</div>` : ''}
+          </div>
+          <div class="segment-km">${fmt(dist)}</div>
+        `;
+        res.appendChild(row);
+      }
+
+      if (lastSegments.length > 1) {
+        const total = document.createElement('div');
+        total.className = 'total-row';
+        total.innerHTML = `<span class="lbl">Gesamt</span><span class="km">${fmt(totalDist)}</span>`;
+        res.appendChild(total);
+      }
+
+      res.classList.add('show');
+      exportBtn.classList.add('show');
+    } catch(ex) {
+      err.textContent = ex.message;
+      err.classList.add('show');
+    } finally {
+      btn.disabled = false;
+      spin.classList.remove('show');
+    }
+  });
+
+  // ── Excel Export ──────────────────────────────────────────────────
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    if (!lastSegments.length) return;
+    const rows = lastSegments.map(s => ({
+      'Datum Von':  s.datumVon  || '',
+      'Von':        s.von,
+      'Datum Nach': s.datumNach || '',
+      'Nach':       s.nach,
+      'Kilometer':  parseFloat((s.distanz / 1000).toFixed(1))
+    }));
+    const total = lastSegments.reduce((sum, s) => sum + s.distanz, 0);
+    rows.push({ 'Datum Von': '', 'Von': '', 'Datum Nach': '', 'Nach': 'GESAMT', 'Kilometer': parseFloat((total/1000).toFixed(1)) });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{ wch: 12 }, { wch: 22 }, { wch: 12 }, { wch: 22 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Strecken');
+    XLSX.writeFile(wb, `strecken_${new Date().toISOString().slice(0,10)}.xlsx`);
+  });
+</script>
+</body>
+</html>
