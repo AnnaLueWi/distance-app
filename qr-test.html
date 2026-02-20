@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Test</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; background: #0d1b3e; color: #fff; padding: 16px; }
+  button { width: 100%; padding: 14px; background: #fff; color: #0d1b3e; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; margin-bottom: 12px; cursor: pointer; }
+  video { width: 100%; border-radius: 8px; background: #000; display: block; margin-bottom: 8px; }
+  canvas { width: 100%; border-radius: 8px; display: block; margin-bottom: 8px; }
+  #log { background: #1a2a4e; border-radius: 8px; padding: 12px; font-size: 0.78rem; line-height: 1.8; min-height: 80px; word-break: break-all; }
+  .ok  { color: #6effa0; }
+  .err { color: #ff8080; }
+  .inf { color: #aac4ff; }
+  #result { background: #1a6b3c; border-radius: 8px; padding: 12px; margin-bottom: 12px; display: none; font-size: 1rem; }
+</style>
+</head>
+<body>
+
+<h2 style="margin-bottom:16px">QR Scanner Test</h2>
+
+<button id="startBtn">📷 Kamera starten</button>
+<button id="stopBtn" style="display:none;background:#c0392b;color:white">⏹ Stopp</button>
+
+<video id="v" autoplay playsinline muted></video>
+<canvas id="c"></canvas>
+
+<div id="result"></div>
+<div id="log"><span class="inf">Warte auf Start...</span></div>
+
+<script>
+let stream = null;
+let raf = null;
+let scanning = false;
+let frameCount = 0;
+
+const v = document.getElementById('v');
+const c = document.getElementById('c');
+const ctx = c.getContext('2d', { willReadFrequently: true });
+const logEl = document.getElementById('log');
+const resultEl = document.getElementById('result');
+
+function log(msg, type = 'inf') {
+  const line = document.createElement('div');
+  line.className = type;
+  line.textContent = new Date().toLocaleTimeString() + ' – ' + msg;
+  logEl.prepend(line);
+  // Keep only last 20 lines
+  while (logEl.children.length > 20) logEl.removeChild(logEl.lastChild);
+}
+
+document.getElementById('startBtn').addEventListener('click', async () => {
+  log('Starte Kamera...');
+  resultEl.style.display = 'none';
+
+  const tries = [
+    { video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+    { video: { facingMode: 'environment' } },
+    { video: { width: { ideal: 1280 }, height: { ideal: 720 } } },
+    { video: true }
+  ];
+
+  for (let i = 0; i < tries.length; i++) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(tries[i]);
+      log('Kamera gestartet mit Option ' + (i+1), 'ok');
+      break;
+    } catch(e) {
+      log('Option ' + (i+1) + ' fehlgeschlagen: ' + e.message, 'err');
+      stream = null;
+    }
+  }
+
+  if (!stream) {
+    log('FEHLER: Keine Kamera verfügbar!', 'err');
+    return;
+  }
+
+  v.srcObject = stream;
+  try {
+    await v.play();
+    log('Video spielt', 'ok');
+  } catch(e) {
+    log('Play-Fehler: ' + e.message, 'err');
+  }
+
+  // Wait for dimensions
+  let waited = 0;
+  const waitTimer = setInterval(() => {
+    waited += 100;
+    if (v.videoWidth > 0 && v.videoHeight > 0) {
+      clearInterval(waitTimer);
+      log('Video-Größe: ' + v.videoWidth + 'x' + v.videoHeight, 'ok');
+      log('jsQR geladen: ' + (typeof jsQR !== 'undefined' ? 'JA' : 'NEIN'), typeof jsQR !== 'undefined' ? 'ok' : 'err');
+      startScan();
+    } else if (waited > 5000) {
+      clearInterval(waitTimer);
+      log('TIMEOUT: Kein Videobild nach 5s! readyState=' + v.readyState, 'err');
+    }
+  }, 100);
+
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display = 'block';
+});
+
+document.getElementById('stopBtn').addEventListener('click', stopAll);
+
+function startScan() {
+  scanning = true;
+  frameCount = 0;
+  log('Scan gestartet – halte QR-Code vor die Kamera', 'ok');
+  scan();
+}
+
+function scan() {
+  if (!scanning) return;
+
+  if (v.readyState >= 2 && v.videoWidth > 0) {
+    c.width = v.videoWidth;
+    c.height = v.videoHeight;
+    ctx.drawImage(v, 0, 0);
+
+    frameCount++;
+    if (frameCount % 30 === 0) {
+      log('Frames gescannt: ' + frameCount + ' | Größe: ' + c.width + 'x' + c.height);
+    }
+
+    let imageData;
+    try {
+      imageData = ctx.getImageData(0, 0, c.width, c.height);
+    } catch(e) {
+      log('getImageData Fehler: ' + e.message, 'err');
+      raf = requestAnimationFrame(scan);
+      return;
+    }
+
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'attemptBoth'
+    });
+
+    if (code) {
+      log('QR ERKANNT: ' + code.data, 'ok');
+      resultEl.textContent = '✓ Erkannt: ' + code.data;
+      resultEl.style.display = 'block';
+      stopAll();
+      return;
+    }
+  } else {
+    if (frameCount === 0) log('Warte auf Videodaten... readyState=' + v.readyState);
+  }
+
+  raf = requestAnimationFrame(scan);
+}
+
+function stopAll() {
+  scanning = false;
+  if (raf) { cancelAnimationFrame(raf); raf = null; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  v.srcObject = null;
+  document.getElementById('startBtn').style.display = 'block';
+  document.getElementById('stopBtn').style.display = 'none';
+  log('Gestoppt');
+}
+</script>
+</body>
+</html>
