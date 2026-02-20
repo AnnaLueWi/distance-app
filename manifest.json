@@ -1,7 +1,7 @@
 {
-  "name": "Mehrstrecken-Rechner",
-  "short_name": "Strecken",
-  "description": "Kilometerangaben für mehrere Haltepunkte berechnen",
+  "name": "Fahrtenbuch",
+  "short_name": "Fahrtenbuch",
+  "description": "Kilometerangaben erfassen und als Fahrtenbuch speichern",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0d1b3e",
