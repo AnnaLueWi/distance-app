@@ -178,7 +178,7 @@
   .btn-primary {
     flex: 1;
     padding: 13px;
-    background: #0d1b3e;
+    background: #1a6b3c;
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -190,27 +190,22 @@
     cursor: pointer;
     transition: background 0.15s;
   }
-  .btn-primary:active { background: #162a5e; }
+  .btn-primary:active { background: #145530; }
   .btn-primary:disabled { opacity: 0.4; }
 
-  .btn-save {
+  .btn-reset {
     padding: 13px 14px;
-    background: #1a6b3c;
-    color: #fff;
-    border: none;
+    background: none;
+    border: 1.5px solid #d0d8ed;
+    color: #6b7a9e;
     border-radius: 6px;
-    font-family: 'Space Mono', monospace;
-    font-weight: 700;
-    font-size: 0.75rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-size: 1rem;
     cursor: pointer;
-    transition: background 0.15s;
-    display: none;
-    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
   }
-  .btn-save:active { background: #145530; }
-  .btn-save.show { display: block; }
+  .btn-reset:active { border-color: #0d1b3e; color: #0d1b3e; background: #f0f3fa; }
+
 
   /* ── Spinner / Error ── */
   .spinner {
@@ -413,8 +408,8 @@
     <hr>
 
     <div class="btn-row">
-      <button class="btn-primary" id="calcBtn">Berechnen</button>
-      <button class="btn-save" id="saveBtn">💾 Speichern</button>
+      <button class="btn-primary" id="saveBtn">💾 Speichern</button>
+      <button class="btn-reset" id="resetBtn" title="Formular zurücksetzen">↺</button>
     </div>
     <div class="spinner" id="spinner"></div>
     <div class="msg error" id="errorMsg"></div>
@@ -468,10 +463,25 @@ function saveAllTrips(trips) {
   localStorage.setItem(STORE_KEY, JSON.stringify(trips));
 }
 
+function segKey(seg) {
+  return seg.date + '|' + seg.von + '|' + seg.nach + '|' + seg.km;
+}
+
 function saveTrip(trip) {
-  const trips = loadAllTrips();
-  trips.push(trip);
-  saveAllTrips(trips);
+  const existing = loadAllTrips();
+
+  // Build fingerprint set of all already-stored segments
+  const stored = new Set();
+  existing.forEach(t => t.segments.forEach(s => stored.add(segKey(s))));
+
+  // Filter out duplicates
+  const newSegs = trip.segments.filter(s => !stored.has(segKey(s)));
+
+  if (newSegs.length === 0) return 'duplicate';
+
+  existing.push(Object.assign({}, trip, { segments: newSegs }));
+  saveAllTrips(existing);
+  return 'saved';
 }
 
 function deleteTripsForMonth(monthKey) {
@@ -497,15 +507,29 @@ document.querySelectorAll('.tab').forEach(btn => {
 // ═══════════════════════════════════════════════
 let stopCount = 0;
 
+function todayISO() {
+  const d = new Date();
+  return d.toISOString().slice(0, 10);
+}
+
 function getLastDate() {
   const dates = [...document.querySelectorAll('.stop-row input[type="date"]')];
   for (let i = dates.length - 1; i >= 0; i--) {
     if (dates[i].value) return dates[i].value;
   }
-  return '';
+  return todayISO();
 }
 
-function addStop(placeholder) {
+// QR icon as inline SVG
+const QR_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+  <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none"/>
+  <line x1="14" y1="14" x2="14" y2="14"/><line x1="17" y1="14" x2="17" y2="14"/><line x1="20" y1="14" x2="20" y2="14"/>
+  <line x1="14" y1="17" x2="14" y2="17"/><line x1="17" y1="17" x2="20" y2="17"/><line x1="20" y1="20" x2="14" y2="20"/>
+  <line x1="14" y1="20" x2="14" y2="17"/>
+</svg>`;
+
+function addStop(placeholder, isFirst) {
   stopCount++;
   const list = document.getElementById('stopsList');
   const row = document.createElement('div');
@@ -514,35 +538,37 @@ function addStop(placeholder) {
     <span class="stop-num">${list.children.length + 1}</span>
     <input type="date" />
     <input type="text" placeholder="${placeholder || 'Ort eingeben'}" autocomplete="off" />
-    <button class="icon-btn qr-btn" title="QR scannen">&#x1F4F7;</button>
+    <button class="icon-btn qr-btn" title="QR scannen">${QR_ICON}</button>
     <button class="icon-btn remove" title="Entfernen">&#x00D7;</button>
   `;
 
-  // Auto-fill date from previous stop
+  // Set date: first stop gets today, others inherit from previous
   const dateInput = row.querySelector('input[type="date"]');
-  const lastDate = getLastDate();
-  if (lastDate) dateInput.value = lastDate;
+  dateInput.value = getLastDate();
 
-  // When date changes → propagate to all following empty date fields
+  // When date changes → propagate to all following stops
   dateInput.addEventListener('change', () => {
     const allRows = [...document.querySelectorAll('.stop-row')];
     const idx = allRows.indexOf(row);
     for (let i = idx + 1; i < allRows.length; i++) {
-      const d = allRows[i].querySelector('input[type="date"]');
-      d.value = dateInput.value;
+      allRows[i].querySelector('input[type="date"]').value = dateInput.value;
     }
   });
 
+  // Remove button – always works, but keeps minimum 2 stops
   row.querySelector('.remove').addEventListener('click', () => {
-    if (document.getElementById('stopsList').children.length > 2) {
+    const list = document.getElementById('stopsList');
+    if (list.children.length > 2) {
       row.remove();
       updateNumbers();
     }
   });
+
   row.querySelector('.qr-btn').addEventListener('click', () => {
     activeInput = row.querySelector('input[type="text"]');
     openQR();
   });
+
   row.querySelector('input[type="text"]').addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       const inputs = [...document.querySelectorAll('.stop-row input[type="text"]')];
@@ -562,9 +588,22 @@ function updateNumbers() {
   });
 }
 
-addStop('Startpunkt');
+function resetForm() {
+  document.getElementById('stopsList').innerHTML = '';
+  stopCount = 0;
+  addStop('Startpunkt', true);
+  addStop('Endpunkt');
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('errorMsg').classList.remove('show');
+  document.getElementById('successMsg').classList.remove('show');
+  pendingTrip = null;
+}
+
+addStop('Startpunkt', true);
 addStop('Endpunkt');
 document.getElementById('addBtn').addEventListener('click', () => addStop('Zwischenstopp'));
+document.getElementById('resetBtn').addEventListener('click', resetForm);
 
 // ═══════════════════════════════════════════════
 // QR SCANNER
@@ -644,11 +683,11 @@ function monthLabel(key) {
 }
 
 // ═══════════════════════════════════════════════
-// CALCULATE
+// SAVE (berechnet automatisch im Hintergrund)
 // ═══════════════════════════════════════════════
-let pendingTrip = null; // segments ready to save
+let pendingTrip = null;
 
-document.getElementById('calcBtn').addEventListener('click', async () => {
+document.getElementById('saveBtn').addEventListener('click', async () => {
   const rows = [...document.querySelectorAll('.stop-row')];
   const locs = rows.map(r => r.querySelector('input[type="text"]').value.trim());
   const dates = rows.map(r => r.querySelector('input[type="date"]').value);
@@ -656,19 +695,16 @@ document.getElementById('calcBtn').addEventListener('click', async () => {
   const errEl = document.getElementById('errorMsg');
   const sucEl = document.getElementById('successMsg');
   const resEl = document.getElementById('results');
-  const calcBtn = document.getElementById('calcBtn');
   const saveBtn = document.getElementById('saveBtn');
   const spin = document.getElementById('spinner');
 
   errEl.classList.remove('show'); sucEl.classList.remove('show');
   resEl.classList.remove('show'); resEl.innerHTML = '';
-  saveBtn.classList.remove('show');
-  pendingTrip = null;
 
   if (locs.some(v => !v)) { errEl.textContent = 'Bitte alle Ortsfelder ausfüllen.'; errEl.classList.add('show'); return; }
   if (dates.some(v => !v)) { errEl.textContent = 'Bitte alle Datumsfelder ausfüllen.'; errEl.classList.add('show'); return; }
 
-  calcBtn.disabled = true;
+  saveBtn.disabled = true;
   spin.classList.add('show');
 
   try {
@@ -679,14 +715,14 @@ document.getElementById('calcBtn').addEventListener('click', async () => {
     for (let i = 0; i < places.length - 1; i++) {
       const km = await getKm(places[i], places[i+1]);
       segments.push({
-        date: dates[i],           // date of departure stop
+        date: dates[i],
         von: places[i].name,
         nach: places[i+1].name,
         km: parseFloat(km.toFixed(1))
       });
       total += km;
 
-      // Render segment
+      // Show result informativ
       const row = document.createElement('div');
       row.className = 'seg-row';
       row.innerHTML = `
@@ -707,32 +743,29 @@ document.getElementById('calcBtn').addEventListener('click', async () => {
     }
 
     resEl.classList.add('show');
-    saveBtn.classList.add('show');
-    pendingTrip = { segments, savedAt: new Date().toISOString(), monthKey: monthKey(dates[0]) };
+
+    // Direkt speichern – Duplikate werden automatisch herausgefiltert
+    const result = saveTrip({ segments, savedAt: new Date().toISOString(), monthKey: monthKey(dates[0]) });
+
+    if (result === 'duplicate') {
+      sucEl.textContent = 'ℹ️ Alle Einträge bereits vorhanden – nichts Neues gespeichert.';
+    } else {
+      sucEl.textContent = '✓ Fahrt gespeichert!';
+    }
+    sucEl.classList.add('show');
+
+    setTimeout(() => {
+      sucEl.classList.remove('show');
+      resetForm();
+    }, 2200);
 
   } catch(e) {
     errEl.textContent = e.message;
     errEl.classList.add('show');
   } finally {
-    calcBtn.disabled = false;
+    saveBtn.disabled = false;
     spin.classList.remove('show');
   }
-});
-
-// ═══════════════════════════════════════════════
-// SAVE
-// ═══════════════════════════════════════════════
-document.getElementById('saveBtn').addEventListener('click', () => {
-  if (!pendingTrip) return;
-  saveTrip(pendingTrip);
-
-  const suc = document.getElementById('successMsg');
-  suc.textContent = '✓ Fahrt gespeichert!';
-  suc.classList.add('show');
-  document.getElementById('saveBtn').classList.remove('show');
-  pendingTrip = null;
-
-  setTimeout(() => suc.classList.remove('show'), 3000);
 });
 
 // ═══════════════════════════════════════════════
